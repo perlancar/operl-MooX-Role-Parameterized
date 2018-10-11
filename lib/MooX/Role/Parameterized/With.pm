@@ -4,18 +4,32 @@ use warnings;
 
 # ABSTRACT: MooX::Role::Parameterized:With - dsl to apply roles with composition parameters
 
-use Exporter;    # qw(import);
+use Exporter        qw(import);
 use Module::Runtime qw(use_module);
-use List::MoreUtils qw(natatime);
+use Moo::Role       qw();
 
-sub import {
-    my $package = shift;
-    my $target  = caller;
+our @EXPORT = qw(with);
 
-    my $it = natatime( 2, @_ );
-
-    while ( my ( $role, $params ) = $it->() ) {
-        use_module($role)->apply( $params, target => $target );
+sub with {
+    my $target = caller;
+    
+    while (@_) {
+        my $role = shift;
+        my $mod = use_module($role);
+        if (@_ && ref $_[0] eq 'HASH') {
+            print "D1\n";
+            my $params = shift;
+            $mod->apply( $params, target => $target );
+        } else {
+            print "D2\n";
+            if ($mod->can("apply")) {
+                $mod->apply( {}, target => $target );
+            } else {
+                print "D1\n";
+                Moo::Role->apply_roles_to_package($target, $mod);
+                Moo::Role->_maybe_reset_handlemoose($target);
+            }
+        }
     }
 }
 
